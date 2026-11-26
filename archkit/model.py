@@ -88,7 +88,7 @@ class Building:
     def __init__(self, name, code="IBC2021", occupancy="R-1", sprinklered=True, accessible=True, residential_interior=False):
         self.d = dict(name=name, code=code, occupancy=occupancy, sprinklered=sprinklered, accessible=accessible,
                       residential_interior=residential_interior, levels=[], walls=[], openings=[], spaces=[], objects=[],
-                      devices=[], stairs=[], elevators=[])
+                      devices=[], stairs=[], elevators=[], guards=[])
         self._n = 0
 
     # ---------- ids ----------
@@ -342,6 +342,12 @@ class Building:
                                      flights=[f1, f2], landings=[dict(poly=landing, z=per * riser)], footprint=foot, res=res,
                                      up=up, origin=[x, y], gap=gap))
         return sid
+
+    def guard(self, level, a, b, h=3.5):
+        """guardrail along an open edge (walkway, balcony, landing). IBC 1015: 42\" min where the drop is > 30\"."""
+        gid = self._id("G")
+        self.d.setdefault("guards", []).append(dict(id=gid, level=level, a=list(map(float, a)), b=list(map(float, b)), h=h))
+        return gid
 
     def elevator(self, eid, levels, rect):
         self.d["elevators"].append(dict(id=eid, levels=levels, rect=list(rect)))

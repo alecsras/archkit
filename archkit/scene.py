@@ -196,6 +196,8 @@ def build_scene(b):
             nx, ny = -uy, ux; hw = f1["width"] / 2
             a = (f1["start"][0] - nx * hw, f1["start"][1] - ny * hw); c = (f1["start"][0] + nx * hw, f1["start"][1] + ny * hw)
             S["guards"].append(dict(a=list(a), b=list(c), z0=z1, z1=z1 + 3.5))
+    for g in d.get("guards", []):
+        z = lv[g["level"]]["elev"]; S["guards"].append(dict(a=g["a"], b=g["b"], z0=z, z1=z + g["h"], rail=True))
     top = order[-1]
     fp = unary_union([b.spoly(s["id"]) for s in d["spaces"] if s["level"] == top["id"] and s["poly"]] + [b.walls_union(top["id"])]).buffer(0)
     S["roof"] = dict(poly=[list(c) for c in fp.exterior.coords[:-1]], z=top["elev"] + top["height"])
@@ -211,5 +213,11 @@ def build_scene(b):
             break
     x0 = min(p[0] for p in S["roof"]["poly"]); y0 = min(p[1] for p in S["roof"]["poly"])
     x1 = max(p[0] for p in S["roof"]["poly"]); y1 = max(p[1] for p in S["roof"]["poly"])
+    # ground inside the overall bounds but outside the ground-floor building is walkable grade
+    g0 = order[0]["id"]
+    built = unary_union([b.spoly(s["id"]) for s in d["spaces"] if s["level"] == g0 and s["poly"] and not s.get("open")] + [b.walls_union(g0)])
+    grade = sbox(x0, y0, x1, y1).difference(built.buffer(0.01))
+    for g in (grade.geoms if grade.geom_type == "MultiPolygon" else [grade]):
+        if g.area > 0.5: S["walk"].append(dict(poly=[list(c) for c in g.exterior.coords[:-1]], holes=[[list(c) for c in r.coords[:-1]] for r in g.interiors], z=order[0]["elev"], type="grade", level=g0, name="Grade", id="grade"))
     S["bounds"] = [x0, y0, x1, y1]
     return S

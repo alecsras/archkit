@@ -34,13 +34,18 @@ def stair_open(b):     # stair pulled off its walls
     st["footprint"] = [[p[0] + 0.6, p[1]] for p in st["footprint"]]
 def missing_smoke(b):  # remove a room's smoke alarm
     b.d["devices"] = [d for d in b.d["devices"] if not (d["type"] == "smoke_alarm" and d["space"] == sp(b, "Room 203", "L2"))]
+def switch_in_door(b): # light switch mounted inside a doorway
+    b.device(sp(b, "Office"), "switch", 28.0, 26.25)
+def no_guard(b):       # second-floor balcony with an open edge
+    b.open_space("L2", (20, 46.335, 36, 52), "Balcony", "balcony")
 
 CASES = [("wall gap", gap, {"G-WALL-JOIN", "G-ROOM-ENCLOSED"}), ("entrance obstruction", entrance, {"C-DOOR-CLEAR", "C-ROUTE"}),
          ("floating wall light", floating_light, {"P-DEV-ONWALL"}), ("ceiling light outside room", light_outside, {"P-DEV-INSIDE"}),
          ("furniture blocking door", blocked_door, {"C-DOOR-CLEAR", "C-DOOR-SWING", "C-ROUTE"}), ("corridor pinch", corridor, {"C-CORRIDOR", "C-ROUTE-SPLIT", "C-ROUTE"}),
          ("object through wall", through_wall, {"P-OBJ-INSIDE"}), ("overlapping furniture", overlap, {"P-OBJ-COLLIDE"}),
          ("stair rise mismatch", bad_stair, {"C-STAIR-RISE"}), ("door to a drop", nowhere, {"C-DOOR-NOWHERE"}),
-         ("narrow door", narrow_door, {"C-DOOR-WIDTH"}), ("open stair edge", stair_open, {"C-STAIR-GUARD"}), ("missing smoke alarm", missing_smoke, {"M-DEVICES"})]
+         ("narrow door", narrow_door, {"C-DOOR-WIDTH"}), ("open stair edge", stair_open, {"C-STAIR-GUARD"}), ("missing smoke alarm", missing_smoke, {"M-DEVICES"}),
+         ("switch inside a doorway", switch_in_door, {"P-DEV-OPENING"}), ("balcony without a guard", no_guard, {"K-GUARD"})]
 ok_all = True
 for name, fn, want in CASES:
     b = copy.deepcopy(base); fn(b); R = validate(b)

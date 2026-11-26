@@ -52,9 +52,9 @@ def guest_room(L, x0, x1, num, south=False, acc=False, bw=None, big=False):
         b.obj(bath, "lavatory", against=F("N", south), along=bx1 - 1.0)
     b.device(room, "light", (rx0 + rx1) / 2, M(6, south)); b.device(room, "smoke_alarm", (rx0 + rx1) / 2, M(8.5, south))
     b.device(room, "receptacle", rx1, M(9, south)); b.device(room, "receptacle", rx0, M(9.5, south))
-    b.device(room, "switch", xb + 1.75 + 0.25, M(CY0 - 0.25, south))
+    b.device(room, "switch", xb + 1.0, M(CY0 - 0.25, south))   # latch-side wall between bath wall and door jamb
     b.device(bath, "light", (bx0 + bx1) / 2, (by0 + by1) / 2); b.device(bath, "exhaust_fan", (bx0 + bx1) / 2 + 0.8, (by0 + by1) / 2)
-    b.device(bath, "gfci", bx1, (by0 + by1) / 2 + (-0.5 if not south else 0.5))
+    b.device(bath, "gfci", bx1 - (1.6 if acc else 1.0), by1 if south else by0)   # above the lavatory, on its wall
     return room
 
 

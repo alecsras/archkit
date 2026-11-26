@@ -1,3 +1,4 @@
+from html import escape as esc
 """archkit.render - 2D plan sheets (SVG) and a 3D first-person walkthrough (HTML), both from build_scene()/model only.
 Usage: python -m archkit.render model.json outdir [--report report.json]"""
 import sys, os, json, math
@@ -22,7 +23,7 @@ def plan_svg(b, lid, report=None):
     W, H = (x1 - x0 + 2 * M) * K, (y1 - y0 + 2 * M) * K + 60
     X = lambda x: (x - x0 + M) * K; Y = lambda y: (y - y0 + M) * K + 60
     o = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W:.0f} {H:.0f}" width="{W:.0f}" height="{H:.0f}" font-family="Helvetica,Arial,sans-serif"><rect width="100%" height="100%" fill="#fff"/>']
-    o.append(f'<text x="20" y="34" font-size="22" font-weight="700">{d["name"]} - {lid}</text>')
+    o.append(f'<text x="20" y="34" font-size="22" font-weight="700">{esc(d["name"])} - {lid}</text>')
     def poly(pts, **a):
         attrs = " ".join(f'{k.replace("_", "-")}="{v}"' for k, v in a.items())
         return f'<polygon points="{" ".join(f"{X(p[0]):.1f},{Y(p[1]):.1f}" for p in pts)}" {attrs}/>'
@@ -30,7 +31,7 @@ def plan_svg(b, lid, report=None):
         if s["level"] != lid or not s["poly"]: continue
         o.append(poly(s["poly"], fill=FILL.get(s["type"], "#f5f5f5"), stroke="none"))
         p = b.spoly(s["id"]); c = p.representative_point()
-        o.append(f'<text x="{X(c.x):.1f}" y="{Y(c.y):.1f}" font-size="11" text-anchor="middle" font-weight="700" fill="#334155">{s["name"]}</text>')
+        o.append(f'<text x="{X(c.x):.1f}" y="{Y(c.y):.1f}" font-size="11" text-anchor="middle" font-weight="700" fill="#334155">{esc(s["name"])}</text>')
         o.append(f'<text x="{X(c.x):.1f}" y="{Y(c.y) + 13:.1f}" font-size="9" text-anchor="middle" fill="#64748b">{p.area:.0f} SF</text>')
     # walls minus openings
     cut = []
@@ -61,6 +62,8 @@ def plan_svg(b, lid, report=None):
         elif op["door"] in ("pocket", "slide"):
             ax, ay, ux, uy, n, L = wall_frame(w); a, c = op["offset"], op["offset"] + op["width"]
             o.append(f'<line x1="{X(ax + ux * a):.1f}" y1="{Y(ay + uy * a):.1f}" x2="{X(ax + ux * c):.1f}" y2="{Y(ay + uy * c):.1f}" stroke="#111827" stroke-width="2" stroke-dasharray="6,3"/>')
+    for g in d.get("guards", []):
+        if g["level"] == lid: o.append(f'<line x1="{X(g["a"][0]):.1f}" y1="{Y(g["a"][1]):.1f}" x2="{X(g["b"][0]):.1f}" y2="{Y(g["b"][1]):.1f}" stroke="#0f172a" stroke-width="3"/>')
     # stairs
     for st in d["stairs"]:
         if st["level_from"] != lid and st["level_to"] != lid: continue
@@ -83,7 +86,7 @@ def plan_svg(b, lid, report=None):
         wall = ob["mount"] == "wall"
         o.append(f'<rect x="{X(a):.1f}" y="{Y(c):.1f}" width="{(e2 - a) * K:.1f}" height="{(f2 - c) * K:.1f}" fill="{"#fde68a" if wall else "#fff"}" stroke="#57534e" stroke-width="1"/>')
         if (e2 - a) * K > 30 and (f2 - c) * K > 14:
-            o.append(f'<text x="{X((a + e2) / 2):.1f}" y="{Y((c + f2) / 2) + 3:.1f}" font-size="8" text-anchor="middle" fill="#57534e">{ob["label"].replace("_", " ")}</text>')
+            o.append(f'<text x="{X((a + e2) / 2):.1f}" y="{Y((c + f2) / 2) + 3:.1f}" font-size="8" text-anchor="middle" fill="#57534e">{esc(ob["label"].replace("_", " "))}</text>')
     # devices
     for dv in d["devices"]:
         s = b.get("spaces", dv["space"])

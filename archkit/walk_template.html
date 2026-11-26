@@ -164,7 +164,7 @@ function inElev(){for(const f of S.floors)if(f.type==='elevator'&&Math.abs(f.z-P
 const levels=S.levels;$('#elev').innerHTML=levels.slice().reverse().map(L=>`<button data-l="${L.elev}">${L.id}</button>`).join('');
 $('#elev').addEventListener('click',e=>{const b=e.target.closest('[data-l]');if(!b)return;const z=+b.dataset.l;$('#fade').style.opacity=1;setTimeout(()=>{Pp.z=z;Pp.vz=0;$('#fade').style.opacity=0},450)});
 function where(){if(Pp.z>S.roof.z-1)return['Roof',''];let best=null;for(const f of S.floors)if(Math.abs(f.z-Pp.z)<5.5&&inRec(Pp.x,Pp.y,f)){best=f;break}
-  if(best)return[best.name,best.level];for(const r of S.ramps){const L=Math.hypot(r.end[0]-r.start[0],r.end[1]-r.start[1]);const t=((Pp.x-r.start[0])*(r.end[0]-r.start[0])+(Pp.y-r.start[1])*(r.end[1]-r.start[1]))/(L*L);if(t>-0.1&&t<1.1)return['Stair','between levels']}return['Outside','']}
+  if(best)return[best.name,best.level];for(const l of S.landings)if(Math.abs(l.z-Pp.z)<1.2&&inPoly(Pp.x,Pp.y,l.poly))return['Stair landing','between levels'];for(const r of S.ramps){const L=Math.hypot(r.end[0]-r.start[0],r.end[1]-r.start[1]);const t=((Pp.x-r.start[0])*(r.end[0]-r.start[0])+(Pp.y-r.start[1])*(r.end[1]-r.start[1]))/(L*L);if(t>-0.1&&t<1.1)return['Stair','between levels']}return['Outside','']}
 // ---- minimap ----
 const mc=$('#map'),mg=mc.getContext('2d');
 function drawMap(){mg.fillStyle='#0e1218';mg.fillRect(0,0,mc.width,mc.height);const s=Math.min(mc.width/(bx1-bx0+20),mc.height/(by1-by0+20));mg.save();mg.translate(mc.width/2,mc.height/2);mg.scale(s,s);mg.translate(-(bx0+bx1)/2,-(by0+by1)/2);
@@ -186,7 +186,7 @@ function tick(){const dt=Math.min(.05,clock.getDelta());
   R.render(scene,cam);requestAnimationFrame(tick)}
 $('#go').addEventListener('click',()=>{started=true;$('#start').style.display='none';try{const r=cv.requestPointerLock&&cv.requestPointerLock();if(r&&r.catch)r.catch(()=>{})}catch(_){}});
 setT(false);requestAnimationFrame(tick);
-window.__walk={P:Pp,step,use,setT,DOORS};
+window.__walk={P:Pp,step,use,setT,DOORS,target,where};
 }
 </script>
 </body>

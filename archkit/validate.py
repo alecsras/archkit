@@ -99,6 +99,19 @@ def validate(b):
             if un > 1.0 and SPACE[s["type"]].get("exterior") is None:
                 R.err("G-UNSUPPORTED", f"{s['name']} hangs {un:.0f} SF beyond the floor below (no structure)", P2(s["seed"]), s["level"])
             else: R.ok("G-UNSUPPORTED")
+    # open spaces above grade: every edge that is not against a wall needs a guard (IBC 1015)
+    for s in d["spaces"]:
+        if not s.get("open") or not s["poly"]: continue
+        L = lv[s["level"]]
+        if L["elev"] - order[0]["elev"] < 2.5: continue
+        gu = unary_union([LineString([g["a"], g["b"]]) for g in d.get("guards", []) if g["level"] == s["level"] and g["h"] >= 3.5 - 1e-6])
+        gu = gu.buffer(0.15) if not gu.is_empty else Polygon()
+        wu = unions[s["level"]].buffer(0.08)
+        ring = list(b.spoly(s["id"]).exterior.coords)
+        for p_, q_ in zip(ring, ring[1:]):
+            e = LineString([p_, q_]); rest = e.difference(wu).difference(gu)
+            if rest.length > 0.3: R.err("K-GUARD", f"{s['name']}: {rest.length:.1f}' of open edge {P2(p_)}-{P2(q_)} has no 42\" guard (drop {L['elev'] - order[0]['elev']:.0f}')", P2(rest.centroid.coords[0]), s["level"])
+            else: R.ok("K-GUARD")
     # bearing walls stack
     for i in range(1, len(order)):
         lo = [LineString([w["a"], w["b"]]) for w in d["walls"] if w["level"] == order[i - 1]["id"] and w["bearing"]]
@@ -171,6 +184,18 @@ def validate(b):
             else: R.ok("P-DEV-ONWALL")
             clg = s["ceiling"] or lv[s["level"]]["ceiling"]
             if dv["h"] is None or dv["h"] > clg - 0.1: R.err("P-DEV-HEIGHT", f"{dv['type']} {dv['id']} mount height {dv['h']} is above the ceiling", P2((dv['x'], dv['y'])), s["level"])
+            # a wall device needs solid wall behind it: not inside a door or window opening (+3" trim)
+            hit = None
+            for o in d["openings"]:
+                w = W[o["wall"]]
+                if w["level"] != s["level"]: continue
+                ax, ay = w["a"]; L_ = math.dist(w["a"], w["b"]); ux, uy = (w["b"][0] - ax) / L_, (w["b"][1] - ay) / L_
+                t_ = (dv["x"] - ax) * ux + (dv["y"] - ay) * uy; n_ = abs(-(dv["x"] - ax) * uy + (dv["y"] - ay) * ux)
+                if n_ <= w["t"] / 2 + 0.2 and o["offset"] - 0.25 < t_ < o["offset"] + o["width"] + 0.25:
+                    z0, z1 = o["sill"], o["sill"] + o["height"]
+                    if z0 - 0.25 < (dv["h"] or 0) < z1 + 0.25: hit = o
+            if hit: R.err("P-DEV-OPENING", f"{dv['type']} {dv['id']} sits in the {hit['kind']} opening {hit['id']} (no wall behind it)", P2((dv['x'], dv['y'])), s["level"])
+            else: R.ok("P-DEV-OPENING")
 
     # ===== C: CIRCULATION ================================================
     doors = [o for o in d["openings"] if o["kind"] == "door"]
@@ -315,6 +340,8 @@ def validate(b):
         A, Bs = conn[o["id"]]
         A = A or "OUT"; Bs = Bs or "OUT"
         G[A].add(Bs); G[Bs].add(A)
+    for s in d["spaces"]:   # open spaces at grade (sidewalks, patios) are outdoors
+        if s.get("open") and s["poly"] and s["level"] == order[0]["id"]: G["OUT"].add(s["id"]); G[s["id"]].add("OUT")
     stairs_ok = check_stairs(b, R, lv, sp)
     for st in d["stairs"]:
         a = stair_space(b, st["level_from"], st); c = stair_space(b, st["level_to"], st)
